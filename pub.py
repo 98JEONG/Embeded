@@ -155,6 +155,7 @@ def dist(a,b):
     return math.sqrt((a*a)+(b*b))
 
 def MPU6050(size):
+    global mode
     #Gyro/Acc 센서
     #i2c
     power_mgmt_1 = 0x6b
@@ -170,57 +171,67 @@ def MPU6050(size):
     choice=["이상","이하"]  
     case1 = choice[randrange(0,2)]
     case2 = choice[randrange(0,2)]
-    print("x값은 %f %s(으)로, y값은 %f %s(으)로 맞춰주십시오."% (answerX,case1,answerY,case2))
-    #count=0#임시변수
-    while True:
-        #각속도(gyro) 데이터
-        #gyro_xout = read_word_2c(0x43)
-        #gyro_yout = read_word_2c(0x45)
-        #gyro_zout = read_word_2c(0x47)
-       
-        #가속도(acc) 데이터
-        accel_xout = read_word_2c(0x3b)
-        accel_yout = read_word_2c(0x3d)
-        accel_zout = read_word_2c(0x3f)
-
-        accel_xout_scaled = accel_xout / 16384.0
-        accel_yout_scaled = accel_yout / 16384.0
-        accel_zout_scaled = accel_zout / 16384.0
-
-        #우리가 정답이랑 비교해봐야할 값인 것 같음
-        xRotation = get_x_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled)
-        yRotation = get_y_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled)
-        #print (\"x rotation: \" , get_x_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled))
-        #print (\"y rotation: \" , get_y_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled))
-        print(xRotation, yRotation)
-        time.sleep(1)
     
-        if case1==0:
-        #x이상
-            if case2==0:
-            #y이상
-                if xRotation>answerX and yRotation>answerY:
-                    print("■ ",end='')
-                    break
-            elif case2==1:
-            #y이하
-                if xRotation>answerX and yRotation<answerY:
-                    print("■ ",end='')
-                    break
-        elif case1==1:
-        #x이하
-            if case2==0:
-            #y이상
-                if xRotation<answerX and yRotation>answerY:
-                    print("■ ",end='')
-                    break
-            elif case2==1:
-            #y이하
-                if xRotation<answerX and yRotation<answerY:
-                    print("■ ",end='')
-                    break
-                
-            
+    if mode==1:
+        #x, y 둘 중 하나만 범위내로 해당되게
+        
+    elif mode==2:
+        #x, y 둘 중 하나는 정확히 값이 일치하도록 나머지 하나는 범위내에 들어오게만
+        
+    else:
+        #동시에 요구하는 x,y 값 모두 만족하게 
+        print("x값은 %f %s(으)로, y값은 %f %s(으)로 맞춰주십시오."% (answerX,case1,answerY,case2))
+        
+        #count=0#임시변수
+        while True:
+            #각속도(gyro) 데이터
+            #gyro_xout = read_word_2c(0x43)
+            #gyro_yout = read_word_2c(0x45)
+            #gyro_zout = read_word_2c(0x47)
+
+            #가속도(acc) 데이터
+            accel_xout = read_word_2c(0x3b)
+            accel_yout = read_word_2c(0x3d)
+            accel_zout = read_word_2c(0x3f)
+
+            accel_xout_scaled = accel_xout / 16384.0
+            accel_yout_scaled = accel_yout / 16384.0
+            accel_zout_scaled = accel_zout / 16384.0
+
+            #우리가 정답이랑 비교해봐야할 값인 것 같음
+            xRotation = get_x_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled)
+            yRotation = get_y_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled)
+            #print (\"x rotation: \" , get_x_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled))
+            #print (\"y rotation: \" , get_y_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled))
+            print(xRotation, yRotation)
+            time.sleep(1)
+
+            if case1==0:
+            #x이상
+                if case2==0:
+                #y이상
+                    if xRotation>answerX and yRotation>answerY:
+                        print("■ ",end='')
+                        break
+                elif case2==1:
+                #y이하
+                    if xRotation>answerX and yRotation<answerY:
+                        print("■ ",end='')
+                        break
+            elif case1==1:
+            #x이하
+                if case2==0:
+                #y이상
+                    if xRotation<answerX and yRotation>answerY:
+                        print("■ ",end='')
+                        break
+                elif case2==1:
+                #y이하
+                    if xRotation<answerX and yRotation<answerY:
+                        print("■ ",end='')
+                        break
+                        
+                        
 #3.버튼센서
 def Button(size):
     global LedOn
