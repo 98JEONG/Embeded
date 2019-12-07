@@ -128,7 +128,7 @@ def InfraredRay(size):
         if check:
             break#모두 정답이므로 종료
             
-        
+            
 #2.MPU6050
 def get_y_rotation(x,y,z):
     radians = math.atan2(x, dist(y,z))
@@ -177,12 +177,7 @@ def MPU6050(size):
         #gyro_xout = read_word_2c(0x43)
         #gyro_yout = read_word_2c(0x45)
         #gyro_zout = read_word_2c(0x47)
-        
-        #출력 확인용
-        #print (\"gyro_xout: \", gyro_xout, \" scaled: \", (gyro_xout / 131))
-        #print (\"gyro_yout: \", gyro_yout, \" scaled: \", (gyro_yout / 131))
-        #print (\"gyro_zout: \", gyro_zout, \" scaled: \", (gyro_zout / 131))
-
+       
         #가속도(acc) 데이터
         accel_xout = read_word_2c(0x3b)
         accel_yout = read_word_2c(0x3d)
@@ -191,11 +186,6 @@ def MPU6050(size):
         accel_xout_scaled = accel_xout / 16384.0
         accel_yout_scaled = accel_yout / 16384.0
         accel_zout_scaled = accel_zout / 16384.0
-
-        #출력 확인용
-        #print (\"accel_xout: \", accel_xout, \" scaled: \", accel_xout_scaled)
-        #print (\"accel_yout: \", accel_yout, \" scaled: \", accel_yout_scaled)
-        #print (\"accel_zout: \", accel_zout, \" scaled: \", accel_zout_scaled)
 
         #우리가 정답이랑 비교해봐야할 값인 것 같음
         xRotation = get_x_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled)
