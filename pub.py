@@ -299,7 +299,7 @@ def Goughness(size):
             #조도 센서 값 계속 읽어오기위해 무한루프
             while True:
                 if GPIO.input(GHPin)==answer_g[ans_count]:
-                    ans_count++
+                    ans_count+=ans_count
                     print("%s번째 자리를 맞췄습니다.",ans_count)
                     break
 
@@ -314,7 +314,7 @@ def Goughness(size):
         while ans_count!=len(answer_g):
             while True:
                 if GPIO.input(GHPin)==answer_g[ans_count]:
-                    ans_count++
+                    ans_count+=ans_count
                     print("%s번째 자리를 맞췄습니다.",ans_count)
                     break
         
@@ -329,7 +329,7 @@ def Goughness(size):
         while ans_count!=len(answer_g):
             while True:
                 if GPIO.input(GHPin)==answer_g[ans_count]:
-                    ans_count++
+                    ans_count+=ans_count
                     print("%s번째 자리를 맞췄습니다.",ans_count)
                     break
     
