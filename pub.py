@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Dec  7 15:47:50 2019
+Created on Sat Dec  7 16:20:58 2019
 
-@author: sejeong
+@author: hyoju
 """
 
 import paho.mqtt.publish as publish
@@ -95,13 +95,12 @@ def makeAnswer(size):
     answer = []
     for i in range(0,size):
         answer.append(random())
-answer = np.array(answer) < 0.5
+        answer = np.array(answer) < 0.5
     return answer
-   
 
 
+#1.적외선센서
 def InfraredRay(size):
-    #적외선센서
     answer = makeAnswer(size)#사이즈만큼의 정답을 만든다
     user = []
     while True:
@@ -129,8 +128,8 @@ def InfraredRay(size):
         if check:
             break#모두 정답이므로 종료
             
- 
-    #아래  함수는 MPU6050에서 사용
+        
+#2.MPU6050
 def get_y_rotation(x,y,z):
     radians = math.atan2(x, dist(y,z))
     return -math.degrees(radians)
@@ -155,14 +154,13 @@ def read_word_2c(adr):
 def dist(a,b):
     return math.sqrt((a*a)+(b*b))
 
-    
 def MPU6050(size):
     #Gyro/Acc 센서
     #i2c
     power_mgmt_1 = 0x6b
-    power_mgmt_2 = 0x6c
+    #power_mgmt_2 = 0x6c
     address = 0x68
-    bus.write_byte_data(address, power_mgmt_1, 0) #초기화?인거같던데 잘 모르겟
+    bus.write_byte_data(address, power_mgmt_1, 0)
     #임의로 정답의 x, y값 지정(범위를 모르겠음_범위 수정 필요)
     #문제 예시 : x값을 100(random)이상으로 드시오
     answerX = randrange(1,180)
@@ -173,18 +171,19 @@ def MPU6050(size):
     case1 = choice[randrange(0,2)]
     case2 = choice[randrange(0,2)]
     print("x값은 %f %s(으)로, y값은 %f %s(으)로 맞춰주십시오."% (answerX,case1,answerY,case2))
-    count=0#임시변수
+    #count=0#임시변수
     while True:
-    #각속도(gyro) 데이터
-        gyro_xout = read_word_2c(0x43)
-        gyro_yout = read_word_2c(0x45)
-        gyro_zout = read_word_2c(0x47)
-    #출력 확인용
-    #print (\"gyro_xout: \", gyro_xout, \" scaled: \", (gyro_xout / 131))
-    #print (\"gyro_yout: \", gyro_yout, \" scaled: \", (gyro_yout / 131))
-    #print (\"gyro_zout: \", gyro_zout, \" scaled: \", (gyro_zout / 131))
+        #각속도(gyro) 데이터
+        #gyro_xout = read_word_2c(0x43)
+        #gyro_yout = read_word_2c(0x45)
+        #gyro_zout = read_word_2c(0x47)
+        
+        #출력 확인용
+        #print (\"gyro_xout: \", gyro_xout, \" scaled: \", (gyro_xout / 131))
+        #print (\"gyro_yout: \", gyro_yout, \" scaled: \", (gyro_yout / 131))
+        #print (\"gyro_zout: \", gyro_zout, \" scaled: \", (gyro_zout / 131))
 
-    #가속도(acc) 데이터
+        #가속도(acc) 데이터
         accel_xout = read_word_2c(0x3b)
         accel_yout = read_word_2c(0x3d)
         accel_zout = read_word_2c(0x3f)
@@ -193,19 +192,19 @@ def MPU6050(size):
         accel_yout_scaled = accel_yout / 16384.0
         accel_zout_scaled = accel_zout / 16384.0
 
-    #출력 확인용
-    #print (\"accel_xout: \", accel_xout, \" scaled: \", accel_xout_scaled)
-    #print (\"accel_yout: \", accel_yout, \" scaled: \", accel_yout_scaled)
-    #print (\"accel_zout: \", accel_zout, \" scaled: \", accel_zout_scaled)
+        #출력 확인용
+        #print (\"accel_xout: \", accel_xout, \" scaled: \", accel_xout_scaled)
+        #print (\"accel_yout: \", accel_yout, \" scaled: \", accel_yout_scaled)
+        #print (\"accel_zout: \", accel_zout, \" scaled: \", accel_zout_scaled)
 
-    #우리가 정답이랑 비교해봐야할 값인 것 같음
+        #우리가 정답이랑 비교해봐야할 값인 것 같음
         xRotation = get_x_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled)
         yRotation = get_y_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled)
-    #print (\"x rotation: \" , get_x_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled))
-    #print (\"y rotation: \" , get_y_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled))
+        #print (\"x rotation: \" , get_x_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled))
+        #print (\"y rotation: \" , get_y_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled))
         print(xRotation, yRotation)
         time.sleep(1)
-    #나는 여기까지인거 같아...
+    
         if case1==0:
         #x이상
             if case2==0:
@@ -230,11 +229,10 @@ def MPU6050(size):
                 if xRotation<answerX and yRotation<answerY:
                     print("■ ",end='')
                     break
-
-
-
+                
+            
+#3.버튼센서
 def Button(size):
-    #버튼센서
     global LedOn
     answer = []
     button_on = [False,False,False]
@@ -260,28 +258,82 @@ def Button(size):
                     print("□ ",end='')
             else:
                 #중간모드일 때
-                if a[answerp[index]]==1:
+                if a[answer[index]]==1:
                     check = False
                     print("□ ",end='')
                 else:
                     print("■ ",end='')
         if check:
             break
-            
-            
-            
+        
     while True:
         print(GPIO.input(17))
         time.sleep(1)
 
+#4.조도센서
 def Goughness(size):
-    #조도센서
     #1과 0사이의 값으로 나옴
-    while True:
-        print(GPIO.input(GHPin))
-        time.sleep(1)
     
+    #데이터 출력 확인
+    #while True:
+        #print(GPIO.input(GHPin))
+        #time.sleep(1)
+        
+    #빛을 비추면 1, 빛가리면 0
+    #답으로 0과 1로 이루어진 네자리 숫자를 보여줌(정답)
+    #조도센서를 사용하여 주어진 정답을 맞춰야함.
+    global mode #난이도 값
     
+    answer_g = [] #정답 초기화
+    
+    if mode==1:
+        #쉬움 난이도
+        #정답 3자리
+        
+        ans_count=0; #정답맞추면 1씩 증가하여 다음 자리 맞추도록 설정
+        #정답 설정
+        answer_g = [randrange(0,1),randrange(0,1),randrange(0,1)]
+        
+        #자릿수만큼 답을 맞출때까지 while문
+        while ans_count!=len(answer_g):
+            #조도 센서 값 계속 읽어오기위해 무한루프
+            while True:
+                if GPIO.input(GHPin)==answer_g[ans_count]:
+                    ans_count++
+                    print("%s번째 자리를 맞췄습니다.",ans_count)
+                    break
+
+    elif mode==2:
+        #중간 난이도
+        #정답 4자리
+        
+        ans_count=0;
+        answer_g = [randrange(0,1),randrange(0,1),
+                    randrange(0,1),randrange(0,1)]
+        
+        while ans_count!=len(answer_g):
+            while True:
+                if GPIO.input(GHPin)==answer_g[ans_count]:
+                    ans_count++
+                    print("%s번째 자리를 맞췄습니다.",ans_count)
+                    break
+        
+    else:
+        #어려움 난이도
+        #정답 6자리
+        
+        ans_count=0;
+        answer_g = [randrange(0,1),randrange(0,1),randrange(0,1),
+                    randrange(0,1),randrange(0,1),randrange(0,1)]
+        
+        while ans_count!=len(answer_g):
+            while True:
+                if GPIO.input(GHPin)==answer_g[ans_count]:
+                    ans_count++
+                    print("%s번째 자리를 맞췄습니다.",ans_count)
+                    break
+    
+#5.LED
 def LED():
     #random으로 3개중 불을 키고, 끈다
     global LedOn
@@ -294,6 +346,7 @@ def LED():
         else:
             GPIO.output(pins[i],GPIO.LOW)
     
+#6.부저
 def Piezo(size):
     #부저
     list = []
@@ -335,6 +388,7 @@ def MusicGame(size):
         if check:
             break
 
+#게임시작
 def GameStart(size):
     global timer
     game = makeGame(size)
@@ -348,8 +402,8 @@ def GameStart(size):
         GameOver()
         
     
+#게임Over(종료)
 def GameOver():
-    #게임Over(종료)
     global timer
     timer = None
     clearSetting()
