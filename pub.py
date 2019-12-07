@@ -169,11 +169,17 @@ def MPU6050(size):
    
     #sub이 맞춰야할 조건을 pub에게 보여줌
     choice=["이상","이하"]  
+    XY=['x','y']
     case1 = choice[randrange(0,2)]
     case2 = choice[randrange(0,2)]
     
     if mode==1:
         #x, y 둘 중 하나만 범위내로 해당되게
+        tmp = XY[randrange(0,1)]
+        if(tmp=='x') :
+            print("x값을 %f %s(으)로 맞춰주십시오." % (answerX,case1))
+        else :
+            print("y값을 %f %s(으)로 맞춰주십시오." % (answerY,case1))
         
     elif mode==2:
         #x, y 둘 중 하나는 정확히 값이 일치하도록 나머지 하나는 범위내에 들어오게만
