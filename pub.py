@@ -71,16 +71,15 @@ def makeGame(size):
     global Bomb
     index = []
     game = []
-    '''for i in range(size):
+    for i in range(size):
         while True:
             rand = randint(0,len(Question)-1)
-            
             if (rand not in index):
                 index.append(rand)
                 game.append(Question[rand])
                 Bomb.append(False)
-                break'''
-    game.append(Question[0])
+                break
+#     game.append(Question[4])
     return game
 
 def clearSetting():
@@ -92,7 +91,7 @@ def clearSetting():
 def menuSelect():
     global mode
     mode = randint(1,3)
-    #publish.single("embedded/mqtt/project","PLAY",hostname="test.mosquitto.org")
+    publish.single("embedded/mqtt/project","PLAY",hostname="test.mosquitto.org")
    
         
 def makeAnswer(size):
@@ -130,7 +129,7 @@ def sendChat():
     global chat_ok
     global chatting
     chat_ok = False
-    #publish.single("embedded/mqtt/project",chatting,hostname="test.mosquitto.org")#채팅내용을 보냄 
+    publish.single("embedded/mqtt/project",chatting,hostname="test.mosquitto.org")#채팅내용을 보냄 
     chatting = ''
     chatTimer.cancel()
     chatTimer = None
@@ -150,20 +149,15 @@ def InfraredRay(size):
     print('██║██║╚██╗██║██╔══╝  ██╔══██╗██╔══██║██╔══██╗██╔══╝  ██║  ██║')
     print('██║██║ ╚████║██║     ██║  ██║██║  ██║██║  ██║███████╗██████╔╝')
     print('╚═╝╚═╝  ╚═══╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═════╝ ')
-    time.sleep(1)                                             
-    
-    if mode == 3:
-        #조도 센서 output HIGH
-        print("tip ) 가끔은 다른 센서의 도움을 받으세요")
-        time.sleep(1)
+    time.sleep(1)                                            
         
     answer = makeAnswer(size)#사이즈만큼의 정답을 만든다
     for s in range(len(answer)):
         os.system('clear')
         if answer[s] == True:
-            print("검 ",end='')#안가린거 0 
+            print("OFF ",end='')#안가린거 1
         else:
-            print("흰 ",end='')#가린거 1
+            print("ON ",end='')#가린거 0
         if mode == 1:
             time.sleep(0.8)
         elif mode == 2:
@@ -173,7 +167,8 @@ def InfraredRay(size):
     print()
     time.sleep(1)
     
-    user = []
+    user=[2,2,2,2]
+    
     while True:
         if toggle==True:
             sys.exit(0)
@@ -182,28 +177,27 @@ def InfraredRay(size):
         check = True
         for i in range(size):
             a = GPIO.input(IRpin)#적외선센서의 input값을 받아온다
-            
             time.sleep(1)
-            user.append(a)
             
-            if answer[i] == a:
-                if a == True:
-                #정답인 경우
-                    print("■ ",end='')
-                else:
-                    print("□ ",end="")
+            if a==0:
+                print("ON")
             else:
-                #오답인 경우
-                check = False
-                print("X ",end='')
+                print("OFF")
+                
+            if answer[i]==a:
+                user[i]=a;
+            else :
+                user[i]=2
+                
             time.sleep(1)
-            if(mode == 3):
-                #어려움 난이도 일 때
-                condition = GPIO.input(GHPin)#조도센서의 값을 가져온다
-                set_condition = random()<random()#조도센서가 어떤 값을 가져야 하는지에 대한 조건
-                #만약 조도센서의 조건도 만족시켜줘야함
-                if condition != set_condition:
-                    check=False
+        for i in range(len(answer)):
+            if answer[i]==user[i]:
+                print("정답")
+            else:
+                check = False
+                print("오답")
+        time.sleep(1)
+                
         if check:
             GPIO.output(LedPin[ledOnIndex],GPIO.HIGH)
             ledOnIndex+=1
@@ -362,10 +356,12 @@ def Button(size):
         print(str(answer[i])+" ",end='')
     print()
         
+    time.sleep(3)
     while True:
         if(toggle==True):
             sys.exit(0)
         Chat()
+        
         check = True
         #a = [GPIO.input(ButtonPin[0]),GPIO.input(ButtonPin[1]),GPIO.input(ButtonPin[2])]
         #print(a)
@@ -376,10 +372,14 @@ def Button(size):
             time.sleep(2)
             if int(a[int(answer[i])]) == 0:
                 print("■ ",end='')
+                print()
             else:
                 check = False
                 print("□ ",end='')
-            
+                print()
+            time.sleep(2)
+        
+        os.system('clear')    
         if check:
             GPIO.output(LedPin[ledOnIndex],GPIO.HIGH)
             ledOnIndex+=1
@@ -575,7 +575,7 @@ def MusicGame(size):
 def GameStart(size):
     global timer
     global clear
-    game = makeGame(size)
+    game = makeGame(3)
     for i in range(size):
         game[i](size)
         clear[i] = True
@@ -605,11 +605,12 @@ def GameOver():
     print('░ ░   ░   ░   ▒   ░      ░      ░      ░ ░ ░ ▒       ░░     ░     ░░   ░ ')
     print('      ░       ░  ░       ░      ░  ░       ░ ░        ░     ░  ░   ░     ')
     print('                                                     ░           ')
-    
+    publish.single("embedded/mqtt/project","STOP",hostname="test.mosquitto.org")
     time.sleep(100)
     sys.exit(0)
     
 def gameClear():
+    global ledOnIndex
     os.system("clear")
     print(' ________  ___       _______   ________  ________   ')  
     print('|\   ____\|\  \     |\  ___ \ |\   __  \|\   __  \    ')
@@ -618,6 +619,21 @@ def gameClear():
     print('  \ \  \____\ \  \____\ \  \_|\ \ \  \ \  \ \  \\  \| ')
     print('   \ \_______\ \_______\ \_______\ \__\ \__\ \__\\ _\ ')
     print('    \|_______|\|_______|\|_______|\|__|\|__|\|__|\|__|')
+    if ledOnIndex >= 3:
+        time.sleep(1)
+        os.system("clear")
+        print('________  ________  _____ ______   ________  ___       _______  _________  _______   ___  ')     
+        print('|\   ____\|\   __  \|\   _ \  _   \|\   __  \|\  \     |\  ___ \|\___   ___\\  ___ \ |\  \  ')    
+        print('\ \  \___|\ \  \|\  \ \  \\\__\ \  \ \  \|\  \ \  \    \ \   __/\|___ \  \_\ \   __/|\ \  \   ')  
+        print(' \ \  \    \ \  \\\  \ \  \\|__| \  \ \   ____\ \  \    \ \  \_|/__  \ \  \ \ \  \_|/_\ \  \    ')
+        print('  \ \  \____\ \  \\\  \ \  \    \ \  \ \  \___|\ \  \____\ \  \_|\ \  \ \  \ \ \  \_|\ \ \__\   ')
+        print('   \ \_______\ \_______\ \__\    \ \__\ \__\    \ \_______\ \_______\  \ \__\ \ \_______\|__|   ')
+        print('    \|_______|\|_______|\|__|     \|__|\|__|     \|_______|\|_______|   \|__|  \|_______|   ___ ')
+        print('                                                                                           |\__\ ')
+        print('                                                                                           \|__|')
+        publish.single("embedded/mqtt/project","STOP",hostname="test.mosquitto.org")
+        time.sleep(3)
+        sys.exit(0)
                                                       
     
 if __name__ == '__main__':
