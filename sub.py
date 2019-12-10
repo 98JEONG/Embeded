@@ -11,7 +11,9 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe("embedded/mqtt/project")
     
 def on_message(client,userdata,msg):
-    #message오면 게임 시작
+    if str(msg.payload.decode("utf-8"))!="PLAY":
+        #play가 아니면 chatting내용임
+        print(str(msg.payload.decode("utf-8")))
 
 if __name__=='__main__':
     try:
@@ -23,3 +25,4 @@ if __name__=='__main__':
             client.loop_forever()
     except KeyboardInterrupt:
         exit()
+        
