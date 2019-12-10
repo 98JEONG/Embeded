@@ -327,7 +327,7 @@ def Button(size):
         #나중에 지우기
     print("버튼 문제")
     
-    print("|||||보이지 않아도 해결할 수 있습니다|||||")
+    print("|||||다음을 기억하세요|||||")
     answer = []
     button_on = [False,False,False]
     condition = False
@@ -337,6 +337,10 @@ def Button(size):
         button_on[index] = True 
     if mode ==1:
         print("tip ) %d개만 순서대로 1초씩 누르세요"%(np.count_nonzero(button_on)))
+        
+    for i in range(size):
+        print(answer[i],end='')
+        
     while True:
         
         Chat()
@@ -366,7 +370,7 @@ def Button(size):
                 else:
                     print("■ ",end='')
             time.sleep(1)
-        time.sleep(1)
+        time.sleep(3)
         if check:
             os.system('clear')
             
