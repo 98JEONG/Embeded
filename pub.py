@@ -12,8 +12,10 @@ import os
 mode=0#난이도
 IRpin = 21#적외선 GPIO핀
 ButtonPin = [17,27,22] #버튼 GPIO핀
+ButtonOut = [7,8,25] #버튼 GPIO output설정 3.3 한번에되어서??
 LedPin = [5,6,13]#LED GPIO핀
 PiezoPin = 12#부저 GPIO핀
+PiezoInputPin = 23#부저 input pin
 GHPin = 18#조도 GPIO핀
 
     
@@ -31,13 +33,14 @@ Question = []
 Bomb = []#폭탄을 해체했는지(True) 아닌지(False)
 scale = [261,329,196]#도,미,솔
 timer = None
-clear = np.full(size,False)  
+clear = np.full(10,False)  
 
 chatting = ''
 chatTimer = None
 chat_ok = True
 #핀 세팅
 def initSetting():
+    GPIO.setwarnings(False)
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(IRpin,GPIO.IN)
     GPIO.setup(GHPin,GPIO.IN)
@@ -48,7 +51,15 @@ def initSetting():
     GPIO.setup(LedPin[1],GPIO.OUT)
     GPIO.setup(LedPin[2],GPIO.OUT)
     GPIO.setup(PiezoPin,GPIO.OUT)
+    GPIO.setup(PiezoInputPin,GPIO.OUT)
+    GPIO.output(PiezoInputPin,GPIO.LOW)
     
+    GPIO.setup(ButtonOut[0], GPIO.OUT)
+    GPIO.setup(ButtonOut[1], GPIO.OUT)
+    GPIO.setup(ButtonOut[2], GPIO.OUT)
+    GPIO.output(ButtonOut[0], GPIO.LOW)
+    GPIO.output(ButtonOut[1], GPIO.LOW)
+    GPIO.output(ButtonOut[2], GPIO.LOW)
         
 
 def makeGame(size):
@@ -57,21 +68,24 @@ def makeGame(size):
     global Bomb
     index = []
     game = []
-    for i in range(size):
+    '''for i in range(size):
         while True:
             rand = randint(0,len(Question)-1)
+            
             if (rand not in index):
                 index.append(rand)
                 game.append(Question[rand])
                 Bomb.append(False)
-                break
+                print(Question[rand])
+                break'''
+    game.append(Question[1])
     return game
 
 def clearSetting():
     GPIO.output(LedPin[0],GPIO.LOW)
     GPIO.output(LedPin[1],GPIO.LOW)
     GPIO.output(LedPin[2],GPIO.LOW)
-    GPIO.output(PiezoPin,GPIO.OUT)
+    GPIO.output(PiezoPin,GPIO.LOW)
     
 def menuSelect():
     global mode
@@ -82,39 +96,52 @@ def makeAnswer(size):
     #총 답의 size
     answer = []
     for i in range(0,size):
-        answer.append(random())
+        answer = np.append(answer,random())
         answer = np.array(answer) < 0.5
     return answer
 
 def Chat():
     global chatTimer
     global chat_ok
-    os.system('cls')
+    global chatting
+    time.sleep(3)
+    os.system('clear')
     print(">>설명하세요")
     chatTimer = threading.Timer(5,sendChat)#5초동안 설명할 수 있다
+    chatTimer.start()
     while True:
         if chat_ok == False:
+            chat_ok = True
             break
         c = input()
         chatting += c
+    for i in range(3):
+        print(3-i)
+        time.sleep(1)
         
     
 def sendChat():
     global chatTimer
     global chat_ok
+    global chatting
     chat_ok = False
     publish.single("embedded/mqtt/project",chatting,hostname="test.mosquitto.org")#채팅내용을 보냄 
     chatting = ''
     chatTimer.cancel()
     chatTimer = None
-    chat_ok = True
-    os.system('cls')
+    
+    os.system('clear')
     
 
 #1.적외선센서
 def InfraredRay(size):
+    #나중에 지우기
+    print("적외선 문제")
+    
     print("|||||기억하세요|||||")
     print("*1초씩 행동해주세요")
+    
+    time.sleep(4)
     
     if mode == 3:
         #조도 센서 output HIGH
@@ -123,7 +150,7 @@ def InfraredRay(size):
     time.sleep(1)
     answer = makeAnswer(size)#사이즈만큼의 정답을 만든다
     for s in range(len(answer)):
-        os.system('cls')
+        os.system('clear')
         if answer[s] == True:
             print("■ ",end='')
         else:
@@ -134,6 +161,8 @@ def InfraredRay(size):
             time.sleep(0.5)
         else:
             time.sleep(0.3)
+    print()
+    
     user = []
     while True:
         Chat()
@@ -141,16 +170,26 @@ def InfraredRay(size):
             a = GPIO.input(IRpin)#적외선센서의 input값을 받아온다
             time.sleep(1)
             user.append(a)
-            #문제를 푸는 사람이 입력한 값을 저장한다
-        check = True
-        for i in range(size): 
-            if answer[i] == user[i]:
+            check = True
+            if answer[i] == a:
                 #정답인 경우
                 print("■ ",end='')
             else:
                 #오답인 경우
                 check = False
                 print("□ ",end='')
+            print("입력")
+            time.sleep(1)
+            #문제를 푸는 사람이 입력한 값을 저장한다
+        
+#         for i in range(size): 
+#             if answer[i] == user[i]:
+#                 #정답인 경우
+#                 print("■ ",end='')
+#             else:
+#                 #오답인 경우
+#                 check = False
+#                 print("□ ",end='')
             if(mode == 3):
                 #어려움 난이도 일 때
                 condition = GPIO.input(GHPin)#조도센서의 값을 가져온다
@@ -158,12 +197,14 @@ def InfraredRay(size):
                 #만약 조도센서의 조건도 만족시켜줘야함
                 if condition != set_condition:
                     check=False
+        print("내가 한거 적외선")
+        
         if check:
-            os.system('cls')
+            os.system('clear')
             print("|||||CLEAR|||||")
             time.sleep(1)
             break#모두 정답이므로 종료
-    os.system('cls')
+    #os.system('clear')
             
         
 #2.MPU6050
@@ -192,6 +233,9 @@ def dist(a,b):
     return math.sqrt((a*a)+(b*b))
 
 def MPU6050(size):
+        #나중에 지우기
+    print("자이로센서 문제")
+    
     #Gyro/Acc 센서
     #i2c
     power_mgmt_1 = 0x6b
@@ -216,103 +260,125 @@ def MPU6050(size):
         #gyro_xout = read_word_2c(0x43)
         #gyro_yout = read_word_2c(0x45)
         #gyro_zout = read_word_2c(0x47)
-        
+        flag = False
         #출력 확인용
         #print (\"gyro_xout: \", gyro_xout, \" scaled: \", (gyro_xout / 131))
         #print (\"gyro_yout: \", gyro_yout, \" scaled: \", (gyro_yout / 131))
         #print (\"gyro_zout: \", gyro_zout, \" scaled: \", (gyro_zout / 131))
+        
+        while True : 
+            #가속도(acc) 데이터
+            accel_xout = read_word_2c(0x3b)
+            accel_yout = read_word_2c(0x3d)
+            accel_zout = read_word_2c(0x3f)
 
-        #가속도(acc) 데이터
-        accel_xout = read_word_2c(0x3b)
-        accel_yout = read_word_2c(0x3d)
-        accel_zout = read_word_2c(0x3f)
+            accel_xout_scaled = accel_xout / 16384.0
+            accel_yout_scaled = accel_yout / 16384.0
+            accel_zout_scaled = accel_zout / 16384.0
 
-        accel_xout_scaled = accel_xout / 16384.0
-        accel_yout_scaled = accel_yout / 16384.0
-        accel_zout_scaled = accel_zout / 16384.0
+            #출력 확인용
+            #print (\"accel_xout: \", accel_xout, \" scaled: \", accel_xout_scaled)
+            #print (\"accel_yout: \", accel_yout, \" scaled: \", accel_yout_scaled)
+            #print (\"accel_zout: \", accel_zout, \" scaled: \", accel_zout_scaled)
 
-        #출력 확인용
-        #print (\"accel_xout: \", accel_xout, \" scaled: \", accel_xout_scaled)
-        #print (\"accel_yout: \", accel_yout, \" scaled: \", accel_yout_scaled)
-        #print (\"accel_zout: \", accel_zout, \" scaled: \", accel_zout_scaled)
+            #우리가 정답이랑 비교해봐야할 값인 것 같음
+            xRotation = get_x_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled)
+            yRotation = get_y_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled)
+            #print (\"x rotation: \" , get_x_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled))
+            #print (\"y rotation: \" , get_y_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled))
+        
+            print(xRotation, yRotation)
+            time.sleep(1)
 
-        #우리가 정답이랑 비교해봐야할 값인 것 같음
-        xRotation = get_x_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled)
-        yRotation = get_y_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled)
-        #print (\"x rotation: \" , get_x_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled))
-        #print (\"y rotation: \" , get_y_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled))
-        print(xRotation, yRotation)
-        time.sleep(1)
-    
-        if case1==0:
-        #x이상
-            if case2==0:
-            #y이상
-                if xRotation>answerX and yRotation>answerY:
-                    print("■ ",end='')
-                    break
-            elif case2==1:
-            #y이하
-                if xRotation>answerX and yRotation<answerY:
-                    print("■ ",end='')
-                    break
-        elif case1==1:
-        #x이하
-            if case2==0:
-            #y이상
-                if xRotation<answerX and yRotation>answerY:
-                    print("■ ",end='')
-                    break
-            elif case2==1:
-            #y이하
-                if xRotation<answerX and yRotation<answerY:
-                    print("■ ",end='')
-                    break
-                
+            if case1==0:
+            #x이상
+                if case2==0:
+                #y이상
+                    if xRotation>answerX and yRotation>answerY:
+                        print("■ ",end='')
+                        flag = True
+                        break
+                elif case2==1:
+                #y이하
+                    if xRotation>answerX and yRotation<answerY:
+                        print("■ ",end='')
+                        flag = True
+                        break
+            elif case1==1:
+            #x이하
+                if case2==0:
+                #y이상
+                    if xRotation<answerX and yRotation>answerY:
+                        print("■ ",end='')
+                        flag = True
+                        break
+                elif case2==1:
+                #y이하
+                    if xRotation<answerX and yRotation<answerY:
+                        print("■ ",end='')
+                        flag = True
+                        break
+        if flag==True:
+            break
             
 #3.버튼센서
 def Button(size):
+    global mode
+        #나중에 지우기
+    print("버튼 문제")
+    
     print("|||||보이지 않아도 해결할 수 있습니다|||||")
     answer = []
     button_on = [False,False,False]
     condition = False
     for i in range(size):
         index = randint(0,2)
-        answer.append(randint(0,3)-1)
+        answer = np.append(answer,randint(0,3)-1)
         button_on[index] = True 
     if mode ==1:
         print("tip ) %d개만 순서대로 1초씩 누르세요"%(np.count_nonzero(button_on)))
     while True:
+        
         Chat()
         check = True
+        #a = [GPIO.input(ButtonPin[0]),GPIO.input(ButtonPin[1]),GPIO.input(ButtonPin[2])]
+        #print(a)
+        
         for i in range(size):
+            print("누르세요")
             a = [GPIO.input(ButtonPin[0]),GPIO.input(ButtonPin[1]),GPIO.input(ButtonPin[2])]
-            time.sleep(1)
+            
+            print(a)
             if mode == 1:
+                print("모드 1")
                 #쉬움모드일 때
-                if a[answer[index]] == 1:
+                if int(a[int(answer[i])]) == 0:
                     print("■ ",end='')
                 else:
                     check = False
                     print("□ ",end='')
-            elif mode == 2:
+            elif mode == 2 or mode == 3:
+                print("모드 2, 3")
                 #중간모드일 때
-                if a[answer[index]]==1:
+                if int(a[int(answer[i])])==0:
                     check = False
                     print("□ ",end='')
                 else:
                     print("■ ",end='')
-            else:
-                
+            time.sleep(1)
+        time.sleep(1)
         if check:
-            os.system('cls')
+            os.system('clear')
+            
             print("|||||CLEAR|||||")
             time.sleep(1)
             break
-    os.system('cls')
+    os.system('clear')
 
 #4.조도센서
 def Goughness(size):
+        #나중에 지우기
+    print("조도 문제")
     #1과 0사이의 값으로 나옴
     
     #데이터 출력 확인
@@ -385,21 +451,25 @@ def LED():
     
 #6.부저
 def Piezo(size):
+    
     #부저
     list = []
     for i in range(size):
         list.append(randint(0,len(scale)-1))
+        print(list[i])
     return list
 
 
 def playMusic(list):
     #부저 
     global scale
+    GPIO.output(PiezoInputPin,GPIO.HIGH)
     p = GPIO.PWM(PiezoPin,100)
     p.start(100)
     p.ChangeDutyCycle(90)
     for i in range(len(list)):
         p.ChangeFrequency(scale[list[i]])
+        print(scale[list[i]])
         if len(list) == 1:
             time.sleep(1)
         else:
@@ -414,18 +484,30 @@ def playMusic(list):
          
                           
 def MusicGame(size):
+    
+        #나중에 지우기
+    print("부저 문제")
+    time.sleep(3)
     #부저와 버튼으로 게임하기
-    os.system("cls")
+    os.system("clear")
     print("|||||기억하세요|||||")
     list = Piezo(size)
-    os.system("cls")
+    
+    os.system("clear")
     while True:
-        Chat()
         playMusic(list)
+        time.sleep(2)
+        Chat()
+     
+       
         check = True
         for i in range(size):
-            os.system("cls"spd)
+            os.system("clear")
             a = [GPIO.input(ButtonPin[0]),GPIO.input(ButtonPin[1]),GPIO.input(ButtonPin[2])]
+            print(GPIO.input(ButtonPin[0]))
+            print(GPIO.input(ButtonPin[1]))
+            print(GPIO.input(ButtonPin[2]))
+            time.sleep(1)
             a = [a.argmax()]
             playMusic(a)
             time.sleep(1)
@@ -454,15 +536,28 @@ def GameStart(size):
 #게임Over(종료)
 def GameOver():
     global timer
-    os.system("cls")
+    os.system("clear")
     timer = None
     clearSetting()
     print("|||||GAME OVER|||||") 
     time.sleep(1)
     
+    
+def tmp():
+#     GPIO.setmode(GPIO.BCM)
+#     GPIO.setup(17,GPIO.IN)
+#     GPIO.setup(27,GPIO.IN)
+#     GPIO.setup(22,GPIO.IN)
+    while True:
+        print(GPIO.input(17),GPIO.input(27),GPIO.input(22))
+        time.sleep(1)
+    
 if __name__ == '__main__':
     try:
-        os.system('cls')#화면지우기
+        os.system('clear')#화면지우기
+        #initSetting()
+        #tmp()
+        
         initSetting()
         print("BOMBULATOR")
         print("모드 선택 중....")
@@ -474,7 +569,7 @@ if __name__ == '__main__':
         time.sleep(1)
         timer = threading.Timer(90,GameOver)#90초 후에 GameOver함수실행(1분 30초)
         timer.start()
-        os.system('cls')
+        os.system('clear')
         if mode == 1 and mode == 2:
             GameStart(3)
         else:
