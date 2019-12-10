@@ -467,13 +467,14 @@ def Piezo(size):
 def playMusic(list):
     #부저 
     global scale
+    name = ["도","미","솔"]
     GPIO.output(PiezoInputPin,GPIO.HIGH)
     p = GPIO.PWM(PiezoPin,100)
     p.start(100)
     p.ChangeDutyCycle(90)
     for i in range(len(list)):
         p.ChangeFrequency(scale[list[i]])
-        print(scale[list[i]])
+        print(name[list[i]])
         if len(list) == 1:
             time.sleep(1)
         else:
