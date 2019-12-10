@@ -570,6 +570,7 @@ def MusicGame(size):
     #부저와 버튼으로 게임하기
     list = Piezo(size)
     #만든 정답을 list에 받아옵니다
+    time.sleep(1)
     while True:
         
         playMusic(list)
