@@ -21,7 +21,6 @@ GHPin = 18#조도 GPIO핀
 toggle = False#함수별 종료 변수
     
 #ADC를 사용하기 위한 핀
-    
 SPICLK = 11
 SPIMISO = 9
 SPIMOSI = 10
@@ -30,21 +29,22 @@ SPICS = 9
 bus = smbus.SMBus(1)#i2c 인터페이스 디바이스 객체 생성
 address = 0x68
 
-Question = []
+Question = []#현재 선택된 문제를 담는 array
 Bomb = []#폭탄을 해체했는지(True) 아닌지(False)
 scale = [261,329,196]#도,미,솔
-timer = None
-clear = np.full(10,False)  
+timer = None#timer스레드(시간제한)
+claer = [False,False,False]#문제를 모두 해결했는지에 대한(총 3개의 문제에 대해)
 
 chatting = ''
-chatTimer = None
-chat_ok = True
+chatTimer = None#설명 스레드
+chat_ok = True#설명을 하는 중(True), 끝났는지(False)
 
 ledOnIndex = 0#led에 불을 켜는 인덱스
 #핀 세팅
 def initSetting():
     GPIO.setwarnings(False)
     GPIO.setmode(GPIO.BCM)
+    #INPUT용은 GPIO.IN으로 세팅해주고, OUTPUT용은 GPIO.OUTPUT으로 세팅
     GPIO.setup(IRpin,GPIO.IN)
     GPIO.setup(GHPin,GPIO.IN)
     GPIO.setup(ButtonPin[0],GPIO.IN,pull_up_down=GPIO.PUD_UP)
@@ -55,11 +55,12 @@ def initSetting():
     GPIO.setup(LedPin[2],GPIO.OUT)
     GPIO.setup(PiezoPin,GPIO.OUT)
     GPIO.setup(PiezoInputPin,GPIO.OUT)
+    #부저는 잔음이 남을 수 있기 때문에 OUTPUT설정 후 LOW로 세팅
     GPIO.output(PiezoInputPin,GPIO.LOW)
-    
     GPIO.setup(ButtonOut[0], GPIO.OUT)
     GPIO.setup(ButtonOut[1], GPIO.OUT)
     GPIO.setup(ButtonOut[2], GPIO.OUT)
+    #버튼에는 각각 LOW(버튼을 누르지 않은 상태에서 1, 누른 상태에서 0)
     GPIO.output(ButtonOut[0], GPIO.LOW)
     GPIO.output(ButtonOut[1], GPIO.LOW)
     GPIO.output(ButtonOut[2], GPIO.LOW)
@@ -73,16 +74,19 @@ def makeGame(size):
     game = []
     for i in range(size):
         while True:
-            rand = randint(0,len(Question)-1)
+            rand = randint(0,len(Question)-1)#random으로 int값을 선택
             if (rand not in index):
+                #이미 선택된 index면 제외하고 새로운 index를 선택(중복제거)
                 index.append(rand)
                 game.append(Question[rand])
                 Bomb.append(False)
+                #선택된 인덱스의 문제를 해결해야하는 문제에 추가
                 break
 #     game.append(Question[4])
     return game
 
 def clearSetting():
+    #모든 세팅을 해제
     GPIO.output(LedPin[0],GPIO.LOW)
     GPIO.output(LedPin[1],GPIO.LOW)
     GPIO.output(LedPin[2],GPIO.LOW)
@@ -91,11 +95,14 @@ def clearSetting():
 def menuSelect():
     global mode
     mode = randint(1,3)
+    #난이도를 랜덤으로 선택
     publish.single("embedded/mqtt/project","PLAY",hostname="test.mosquitto.org")
+    #embedded/mqtt/project 토픽으로 접속을 시도
    
         
 def makeAnswer(size):
     #총 답의 size
+    #문제의 답을 랜덤으로 생성한다
     answer = []
     for i in range(0,size):
         answer = np.append(answer,random())
@@ -103,22 +110,23 @@ def makeAnswer(size):
     return answer
 
 def Chat():
+    #해결하는 사람에게 전달할 메세지를 입력하는 부분
     global chatTimer
     global chat_ok
     global chatting
     os.system('clear')
     print("▶ 설명하세요")
-    chatTimer = threading.Timer(5,sendChat)#5초동안 설명할 수 있다
+    chatTimer = threading.Timer(5,sendChat)#5초동안 설명할 수 있다(5초뒤 입력을 하지못하게)
     chatTimer.start()
     while True:
         c = input()
         if chat_ok == False:
             chat_ok = True
             break
-        
-        chatting += c
+        publish.single("embedded/mqtt/project",chatting,hostname="test.mosquitto.org")#채팅내용을 보냄 
+        #chatting += c
     
-    
+    #전달이 끝나면 3초의 대기시간을 준다
     for i in range(3):
         print(3-i)
         time.sleep(1)
@@ -128,12 +136,11 @@ def sendChat():
     global chatTimer
     global chat_ok
     global chatting
-    chat_ok = False
-    publish.single("embedded/mqtt/project",chatting,hostname="test.mosquitto.org")#채팅내용을 보냄 
+    chat_ok = False#더이상 입력할 수 없게 False
     chatting = ''
-    chatTimer.cancel()
-    chatTimer = None
-    
+    chatTimer.cancel()#타이머의 작동을 멈춘다
+    chatTimer = None#타이머 변수를 다시 비워준다
+    #publish.single("embedded/mqtt/project",chatting,hostname="test.mosquitto.org")#채팅내용을 보냄 
     os.system('clear')
     print("▶ ENTER 키를 누르면 시작합니다")
     
@@ -167,18 +174,19 @@ def InfraredRay(size):
     print()
     time.sleep(1)
     
-    user=[2,2,2,2]
+    #user=[2,2,2,2]
     
     while True:
+        #만약 게임이 종료된 상태면 exit
         if toggle==True:
             sys.exit(0)
-        Chat()
+        Chat()#설명하는 함수 호출
         
-        check = True
+        check = True#해결했는지 아닌지 체크변수
         for i in range(size):
             a = GPIO.input(IRpin)#적외선센서의 input값을 받아온다
             time.sleep(1)
-            
+            #사용자의 입력에 따른 출력값
             if a==0:
                 print("ON")
             else:
@@ -190,18 +198,22 @@ def InfraredRay(size):
                 user[i]=2
                 
             time.sleep(1)
+            #사용자가 입력한 답이 정답인지 오답인지 확인해준다
         for i in range(len(answer)):
             if answer[i]==user[i]:
                 print("정답")
             else:
+                #만약 오답이면 한번 더 문제를 해결하도록 한다
                 check = False
                 print("오답")
         time.sleep(1)
-                
+        #모두 정답인 경우        
         if check:
             GPIO.output(LedPin[ledOnIndex],GPIO.HIGH)
             ledOnIndex+=1
+            #LED의 불을 하나 켠다
             gameClear()
+            #CLEAR문구를 출력
             time.sleep(1)
             break#모두 정답이므로 종료
     os.system('clear')
@@ -209,10 +221,12 @@ def InfraredRay(size):
         
 #2.MPU6050
 def get_y_rotation(x,y,z):
+    #y의 회전값을 받아온다
     radians = math.atan2(x, dist(y,z))
     return -math.degrees(radians)
 
 def get_x_rotation(x,y,z):
+    #x의 회전값을 받아온다
     radians = math.atan2(y, dist(x,z))
     return math.degrees(radians)
 
@@ -220,6 +234,7 @@ def read_word(adr):
     high = bus.read_byte_data(address,adr)
     low = bus.read_byte_data(address,adr+1)
     val = (high << 8) + low
+    #바이트 정보를 적어준다
     return val
 
 def read_word_2c(adr):
@@ -264,15 +279,17 @@ def MPU6050(size):
     time.sleep(2)
     #count=0#임시변수
     while True:
+        #만약 게임이 완전 종료가 된 경우 exit
         if toggle==True:
             sys.exit(0)
-        Chat()
+       # Chat()
         flag = False
         
         while True : 
+            #게임이 완전 종료가 된 경우 exit
             if toggle==True:
                 sys.exit(0)
-                
+            Chat()    
             #가속도(acc) 데이터
             accel_xout = read_word_2c(0x3b)
             accel_yout = read_word_2c(0x3d)
@@ -284,10 +301,12 @@ def MPU6050(size):
 
             xRotation = get_x_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled)
             yRotation = get_y_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled)
-        
+               #센서의 값을 받아온다
             print(xRotation, yRotation)
+            
             time.sleep(1)
-
+               
+                #정답 조건을 비교하는 부분
             if case1=="이상":
             #x이상
                 if case2=="이상":
@@ -317,6 +336,7 @@ def MPU6050(size):
                         flag = True
                         break
         if flag==True:
+            #만약 정답이면 LED를 하나 켜주고 clear문구 출력
             GPIO.output(LedPin[ledOnIndex],GPIO.HIGH)
             ledOnIndex+=1
             gameClear()
@@ -341,6 +361,7 @@ def Button(size):
     time.sleep(1)
     answer = []
     button_on = [False,False,False]
+    #버튼이 눌렸는지에 대한 bool배열
     condition = False
     for i in range(size):
         index = randint(0,2)
@@ -349,11 +370,11 @@ def Button(size):
         answer = answer.astype('int')
         
         button_on[index] = True 
-    if mode ==1:
-        print("tip ) %d개만 순서대로 누르세요"%(np.count_nonzero(button_on)))
+        #정답을 random으로 만들어준다
         
     for i in range(size):
         print(str(answer[i])+" ",end='')
+        #입력해야하는 답을 보여준다
     print()
         
     time.sleep(3)
@@ -361,7 +382,7 @@ def Button(size):
         if(toggle==True):
             sys.exit(0)
         Chat()
-        
+        #설명할 기회를 준다
         check = True
         #a = [GPIO.input(ButtonPin[0]),GPIO.input(ButtonPin[1]),GPIO.input(ButtonPin[2])]
         #print(a)
@@ -370,6 +391,8 @@ def Button(size):
             print("누르세요")
             a = [GPIO.input(ButtonPin[0]),GPIO.input(ButtonPin[1]),GPIO.input(ButtonPin[2])]
             time.sleep(2)
+            #입력값을 받아 해당 값이 0(눌림)인지 확인한다
+            #만약 정답 버튼의 값이 0이면 올바른 버튼이 눌린 것이므로 정답 아닌 경우 오답
             if int(a[int(answer[i])]) == 0:
                 print("■ ",end='')
                 print()
@@ -381,6 +404,7 @@ def Button(size):
         
         os.system('clear')    
         if check:
+            #만약 해결한 경우 LED불을 하나 켜주고 clear문구를 출력
             GPIO.output(LedPin[ledOnIndex],GPIO.HIGH)
             ledOnIndex+=1
             gameClear()
@@ -432,6 +456,7 @@ def Goughness(size):
                 if(toggle==True):
                     sys.exit(0)
                 ginput = GPIO.input(GHPin)
+                #조도센서의 값을 받아온다
                 time.sleep(1)
                 if ginput==answer_g[ans_count]:
                     ans_count=ans_count+1
@@ -485,6 +510,7 @@ def Goughness(size):
                     print("%s번째 자리를 맞췄습니다"%ans_count)
                 else :
                     print("틀렸습니다")
+    #문제를 해결한 경우 LED의 불을 하나 켜고 clear문구를 출력한다
     os.system("clear")
     GPIO.output(LedPin[ledOnIndex],GPIO.HIGH)
     ledOnIndex+=1
@@ -495,7 +521,7 @@ def Goughness(size):
 #6.부저
 def Piezo(size):
     
-    #부저
+    #부저의 정답을 만들어줍니다.(눌러야하는 순서)
     list = []
     for i in range(size):
         list.append(randint(0,len(scale)-1))
@@ -511,11 +537,13 @@ def playMusic(list):
     p = GPIO.PWM(PiezoPin,100)
     p.start(100)
     p.ChangeDutyCycle(90)
+    #부저에 소리가 날 수 있도록 output값을 설정합니다
     for i in range(len(list)):
         os.system("clear")
+        #도,미,솔의 주기로 소리가 날 수 있도록 frequency를 조절합니다
         p.ChangeFrequency(scale[list[i]])
         print(name[list[i]])
-        
+        #각각의 난이도에 따라 소리가 나는 속도를 다르게 하기 위해 sleep에 다른 값을 줍니다
         if len(list) == 1:
             time.sleep(1)
         else:
@@ -541,27 +569,36 @@ def MusicGame(size):
     print('╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═══╝╚═════╝ ')
     #부저와 버튼으로 게임하기
     list = Piezo(size)
+    #만든 정답을 list에 받아옵니다
     while True:
         
         playMusic(list)
+        #정답을 한번 연주해줍니다
         Chat()
+        #설명합니다
         check = True
         for i in range(size):
             a=[]
             while True:
-                
+                #게임이 완전 종료가된 경우 exit
                 if toggle==True:
                     sys.exit(0)
                 a = [GPIO.input(ButtonPin[0]),GPIO.input(ButtonPin[1]),GPIO.input(ButtonPin[2])]
+                #버튼의 input값을 받아옵니다
                 time.sleep(1)
                 a = np.array(a)
                 if 0 in a:
+                    #버튼이 하나라도 눌릴 떄 까지 input을 계속 받습니다
+                    #만약 눌린 버튼이 정답의 버튼과 일치하지 않는다면 check 변수를 false
                     if a[list[i]] != 0:
                         check = False
+                    #0의 값을 가지는 index를 가져옵니다 (b)
                     b = [a.argmin()]
+                    #b의 소리를 사용자에게 들려줍니다(자신이 현재 누른 버튼에 대한 소리)
                     playMusic(b)
                     break
         if check:
+            #해결한 경우 LED의 불을 켜주고 clear문구를 출력합니다
             os.system("clear")
             GPIO.output(LedPin[ledOnIndex],GPIO.HIGH)
             ledOnIndex+=1
@@ -575,11 +612,11 @@ def MusicGame(size):
 def GameStart(size):
     global timer
     global clear
-    game = makeGame(3)
-    for i in range(size):
-        game[i](size)
-        clear[i] = True
-    if timer != None and sum(clear)==size:
+    game = makeGame(3)#랜덤으로 3개의 게임을 선택합니다
+    for i in range(3):
+        game[i](3)
+        clear[i] = True#해결한 경우 clear변수를 True로 설정합니다
+    if timer != None and sum(clear)==3:
         #시간 제한이 끝나기 전에 clear한 경우
         timer.cancel()#타이머를 멈춘다
         GameOver()
@@ -590,7 +627,7 @@ def GameOver():
     global timer
     global toggle
     toggle = True
-    
+    #게임이 끝났음을 toggle = True로 알립니다
     os.system("clear")
     timer = None
     clearSetting()
@@ -605,9 +642,9 @@ def GameOver():
     print('░ ░   ░   ░   ▒   ░      ░      ░      ░ ░ ░ ▒       ░░     ░     ░░   ░ ')
     print('      ░       ░  ░       ░      ░  ░       ░ ░        ░     ░  ░   ░     ')
     print('                                                     ░           ')
-    publish.single("embedded/mqtt/project","STOP",hostname="test.mosquitto.org")
-    time.sleep(100)
-    sys.exit(0)
+    publish.single("embedded/mqtt/project","STOP",hostname="test.mosquitto.org")#게임이 끝났음을 sub에게도 알립니다
+    time.sleep(100)#다른 스레드가 진행하지 않도록 sleep변수를 사용합니다
+    sys.exit(0)#종료합니다
     
 def gameClear():
     global ledOnIndex
@@ -620,6 +657,7 @@ def gameClear():
     print('   \ \_______\ \_______\ \_______\ \__\ \__\ \__\\ _\ ')
     print('    \|_______|\|_______|\|_______|\|__|\|__|\|__|\|__|')
     if ledOnIndex >= 3:
+        #문제를 모두 해결한 경우 
         time.sleep(1)
         os.system("clear")
         print('________  ________  _____ ______   ________  ___       _______  _________  _______   ___  ')     
@@ -632,6 +670,7 @@ def gameClear():
         print('                                                                                           |\__\ ')
         print('                                                                                           \|__|')
         publish.single("embedded/mqtt/project","STOP",hostname="test.mosquitto.org")
+        #문제가 끝났음을 sub에게 알립니다
         time.sleep(3)
         sys.exit(0)
                                                       
@@ -642,7 +681,7 @@ if __name__ == '__main__':
         #initSetting()
         #tmp()
         
-        initSetting()
+        initSetting()#GPIO초기 설정
         #print("BOMBULATOR")
 
         print(' ________  ________  _____ ______   ________  ___  ___  ___       ________  _________  ________  ________     ')
@@ -665,7 +704,7 @@ if __name__ == '__main__':
         print("게임을 시작합니다") 
         print()
         time.sleep(1)
-        timer = threading.Timer(180,GameOver)#90초 후에 GameOver함수실행(1분 30초)
+        timer = threading.Timer(180,GameOver)#180초 후에 GameOver함수실행(1분 30초)
         timer.start()
         os.system('clear')
         if mode == 1 and mode == 2:
