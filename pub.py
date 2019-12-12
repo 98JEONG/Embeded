@@ -33,8 +33,8 @@ Question = []#현재 선택된 문제를 담는 array
 Bomb = []#폭탄을 해체했는지(True) 아닌지(False)
 scale = [261,329,196]#도,미,솔
 timer = None#timer스레드(시간제한)
-claer = [False,False,False]#문제를 모두 해결했는지에 대한(총 3개의 문제에 대해)
-
+clear = [False,False,False]#문제를 모두 해결했는지에 대한(총 3개의 문제에 대해)
+user=[]
 chatting = ''
 chatTimer = None#설명 스레드
 chat_ok = True#설명을 하는 중(True), 끝났는지(False)
@@ -149,6 +149,7 @@ def sendChat():
 def InfraredRay(size):
     global ledOnIndex
     global toggle
+    global user
 
     print('██╗███╗   ██╗███████╗██████╗  █████╗ ██████╗ ███████╗██████╗ ')
     print('██║████╗  ██║██╔════╝██╔══██╗██╔══██╗██╔══██╗██╔════╝██╔══██╗')
